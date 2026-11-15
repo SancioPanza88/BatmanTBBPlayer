@@ -5,8 +5,8 @@ episodi e link di streaming) e ne riproduce gli episodi **bloccando la pubblicit
 
 ## Scarica la APK
 
-- Release firmata: **[app-release.apk](https://github.com/SancioPanza88/BatmanTBBPlayer/releases/download/v1.0.0/app-release.apk)**
-- Versione debug: **[app-debug.apk](https://github.com/SancioPanza88/BatmanTBBPlayer/releases/download/v1.0.0/app-debug.apk)**
+- Release firmata: **[app-release.apk](https://github.com/SancioPanza88/BatmanTBBPlayer/releases/download/v1.1.0/app-release.apk)**
+- Versione debug: **[app-debug.apk](https://github.com/SancioPanza88/BatmanTBBPlayer/releases/download/v1.1.0/app-debug.apk)**
 - Repository: https://github.com/SancioPanza88/BatmanTBBPlayer
 
 Ogni push su `main` rilancia la build; ogni tag `v*` pubblica una nuova Release con gli APK.
