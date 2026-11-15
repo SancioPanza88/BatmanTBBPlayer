@@ -32,6 +32,11 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/action_toggle_mode"
+        android:title="@string/toggle_mode"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_toggle_adblock"
         android:title="@string/toggle_adblock"
         app:showAsAction="never" />

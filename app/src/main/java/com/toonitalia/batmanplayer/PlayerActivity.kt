@@ -27,31 +27,38 @@ import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.google.android.material.snackbar.Snackbar
 import com.toonitalia.batmanplayer.block.AdBlockScripts
 import com.toonitalia.batmanplayer.block.AdBlocker
 import com.toonitalia.batmanplayer.databinding.ActivityPlayerBinding
+import com.toonitalia.batmanplayer.extractor.ExtractedVideo
+import com.toonitalia.batmanplayer.extractor.VideoExtractor
+import com.toonitalia.batmanplayer.player.NativePlayerFactory
 import com.toonitalia.batmanplayer.util.Prefs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Player di un episodio.
  *
- * Strategia:
- *  1. la pagina dell'episodio viene caricata in una WebView con filtro delle richieste
- *     (nessuna richiesta pubblicitaria raggiunge la rete) e pulizia del DOM;
- *  2. non appena viene individuato il flusso video reale (.m3u8 / .mp4) la riproduzione
- *     passa al player nativo (ExoPlayer / Media3): video senza banner e senza pubblicità;
- *  3. se il flusso non è estraibile la WebView resta in uso, sempre filtrata.
+ * Due modalita' di riproduzione, come nelle app "ad-free":
+ *  1. **Estrazione server** (predefinita): la pagina del provider viene analizzata
+ *     lato app, si ricava l'URL reale del video (.m3u8/.mp4) e la riproduzione
+ *     avviene con il player nativo ExoPlayer -> nessun banner, nessuna pubblicita',
+ *     controlli nativi e supporto HLS;
+ *  2. **WebView filtrata**: fallback (o modalita' manuale) in cui la pagina viene
+ *     caricata in una WebView con filtro delle richieste pubblicitarie e pulizia
+ *     del DOM: anche qui la pubblicita' non viene mostrata.
  */
 class PlayerActivity : AppCompatActivity() {
 
@@ -64,10 +71,9 @@ class PlayerActivity : AppCompatActivity() {
         const val EXTRA_SOURCE = "extra_source"
 
         private const val TAG = "BatmanPlayer"
-        private const val DESKTOP_UA =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
     }
+
+    private enum class PlayMode { EXTRACT, WEB }
 
     private lateinit var binding: ActivityPlayerBinding
     private lateinit var prefs: Prefs
@@ -81,8 +87,10 @@ class PlayerActivity : AppCompatActivity() {
     private var nativePlayer: ExoPlayer? = null
     private var nativeMode: Boolean = false
     private var cleanupJob: Job? = null
+    private var extractionJob: Job? = null
     private var customView: View? = null
     private var episodeTitle: String = ""
+    private var playMode: PlayMode = PlayMode.EXTRACT
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,6 +102,7 @@ class PlayerActivity : AppCompatActivity() {
         url1 = intent.getStringExtra(EXTRA_URL1).orEmpty()
         url2 = intent.getStringExtra(EXTRA_URL2).orEmpty()
         sourceIndex = intent.getIntExtra(EXTRA_SOURCE, prefs.sourceIndex)
+        playMode = if (prefs.useWebMode) PlayMode.WEB else PlayMode.EXTRACT
 
         setupToolbar()
         setupWebView()
@@ -107,7 +116,7 @@ class PlayerActivity : AppCompatActivity() {
                 hideCustomView()
                 return@addCallback
             }
-            if (binding.webView.canGoBack()) {
+            if (binding.webView.isVisible && binding.webView.canGoBack()) {
                 binding.webView.goBack()
                 return@addCallback
             }
@@ -149,6 +158,11 @@ class PlayerActivity : AppCompatActivity() {
                     true
                 }
 
+                R.id.action_toggle_mode -> {
+                    togglePlayMode()
+                    true
+                }
+
                 R.id.action_toggle_adblock -> {
                     prefs.adBlockEnabled = !prefs.adBlockEnabled
                     updateStatus()
@@ -163,6 +177,17 @@ class PlayerActivity : AppCompatActivity() {
     private fun switchSource() {
         sourceIndex = if (sourceIndex == 1) 0 else 1
         prefs.sourceIndex = sourceIndex
+        loadCurrentSource()
+    }
+
+    private fun togglePlayMode() {
+        playMode = if (playMode == PlayMode.EXTRACT) PlayMode.WEB else PlayMode.EXTRACT
+        prefs.useWebMode = playMode == PlayMode.WEB
+        Snackbar.make(
+            binding.root,
+            if (playMode == PlayMode.EXTRACT) R.string.native_player else R.string.web_player,
+            Snackbar.LENGTH_SHORT
+        ).show()
         loadCurrentSource()
     }
 
@@ -195,17 +220,14 @@ class PlayerActivity : AppCompatActivity() {
         Snackbar.make(binding.root, R.string.copy_link, Snackbar.LENGTH_SHORT).show()
     }
 
-    private fun updateStatus() {
+    private fun updateStatus(extra: String? = null) {
         val blocked = blockedCount.get()
-        binding.status.text = if (prefs.adBlockEnabled) {
-            when {
-                nativeMode -> getString(R.string.blocked_requests, blocked) +
-                    "  •  " + getString(R.string.media_found)
-                else -> getString(R.string.blocked_requests, blocked)
-            }
+        val base = if (prefs.adBlockEnabled) {
+            getString(R.string.blocked_requests, blocked)
         } else {
             getString(R.string.adblock_off)
         }
+        binding.status.text = if (extra.isNullOrBlank()) base else "$base  •  $extra"
         binding.status.isVisible = true
     }
 
@@ -218,7 +240,7 @@ class PlayerActivity : AppCompatActivity() {
             javaScriptEnabled = true
             domStorageEnabled = true
             databaseEnabled = true
-            userAgentString = DESKTOP_UA
+            userAgentString = com.toonitalia.batmanplayer.extractor.Http.USER_AGENT
             mediaPlaybackRequiresUserGesture = false
             javaScriptCanOpenWindowsAutomatically = false
             setSupportMultipleWindows(true)
@@ -254,14 +276,48 @@ class PlayerActivity : AppCompatActivity() {
         currentUrl = target
         mediaCandidate = null
         nativeMode = false
+        cleanupJob?.cancel()
+        extractionJob?.cancel()
         releaseNativePlayer()
         binding.playerView.isVisible = false
-        binding.webView.isVisible = true
+        binding.webView.isVisible = false
         binding.loading.isVisible = true
         binding.playerToolbar.subtitle =
             if (sourceIndex == 1) getString(R.string.source_chuckle) else getString(R.string.source_uqload)
-        binding.webView.loadUrl(target)
         updateStatus()
+
+        if (playMode == PlayMode.EXTRACT) {
+            runExtraction(target)
+        } else {
+            startWebView(target)
+        }
+    }
+
+    private fun runExtraction(target: String) {
+        extractionJob = lifecycleScope.launch {
+            updateStatus(getString(R.string.extracting))
+            try {
+                val video = VideoExtractor.extract(target)
+                if (!isActive) return@launch
+                binding.loading.isVisible = false
+                Log.i(TAG, "Flusso estratto: ${video.source}")
+                startNativePlayer(video)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (!isActive) return@launch
+                binding.loading.isVisible = false
+                Log.w(TAG, "Estrazione fallita: ${e.message}")
+                Snackbar.make(binding.root, R.string.extract_failed, Snackbar.LENGTH_LONG).show()
+                startWebView(target)
+            }
+        }
+    }
+
+    private fun startWebView(url: String) {
+        binding.webView.isVisible = true
+        binding.loading.isVisible = true
+        binding.webView.loadUrl(url)
     }
 
     private inner class BlockingWebViewClient : WebViewClient() {
@@ -296,7 +352,6 @@ class PlayerActivity : AppCompatActivity() {
                 // blocca javascript:, intent:, market: ecc.
                 return true
             }
-            // le navigazioni verso siti pubblicitari sono già state bloccate sopra
             return false
         }
 
@@ -335,9 +390,7 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         override fun onHideCustomView() {
-            customView?.let { binding.contentContainer.removeView(it) }
-            customView = null
-            binding.playerToolbar.isVisible = true
+            hideCustomView()
         }
 
         override fun onPermissionRequest(request: PermissionRequest) {
@@ -377,35 +430,46 @@ class PlayerActivity : AppCompatActivity() {
         if (mediaCandidate == url) return
         mediaCandidate = url
         runOnUiThread {
-            if (prefs.preferNativePlayer && !nativeMode && url.startsWith("http")) {
-                startNativePlayer(url)
+            if (!nativeMode && binding.webView.isVisible && url.startsWith("http")) {
+                // il flusso intercettato nella WebView passa comunque al player nativo
+                startNativePlayer(ExtractedVideo(url, mapOf("Referer" to currentUrl)))
             }
         }
     }
 
-    private fun startNativePlayer(url: String) {
+    private fun startNativePlayer(video: ExtractedVideo) {
         try {
             releaseNativePlayer()
 
-            val headers = HashMap<String, String>()
-            headers["Referer"] = currentUrl
-            headers["Origin"] = originOf(currentUrl)
-            headers["User-Agent"] = DESKTOP_UA
+            val headers = HashMap(video.headers)
+            if (!headers.containsKey("Referer")) headers["Referer"] = currentUrl
+            headers["User-Agent"] = com.toonitalia.batmanplayer.extractor.Http.USER_AGENT
 
-            val dataSourceFactory = DefaultHttpDataSource.Factory()
-                .setUserAgent(DESKTOP_UA)
-                .setAllowCrossProtocolRedirects(true)
-                .setDefaultRequestProperties(headers)
-
-            val player = ExoPlayer.Builder(this)
-                .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
-                .build()
-
+            val player = NativePlayerFactory.create(this, headers)
             player.addListener(nativeListener)
 
             nativePlayer = player
             binding.playerView.player = player
-            player.setMediaItem(MediaItem.fromUri(url))
+
+            val mediaItem = if (video.subtitles.isEmpty()) {
+                MediaItem.fromUri(video.source)
+            } else {
+                MediaItem.Builder()
+                    .setUri(video.source)
+                    .setSubtitleConfigurations(
+                        video.subtitles.map { subtitle ->
+                            MediaItem.SubtitleConfiguration.Builder(Uri.parse(subtitle.url))
+                                .setMimeType(MimeTypes.TEXT_VTT)
+                                .setLanguage(subtitle.label)
+                                .setSelectionFlags(
+                                    if (subtitle.default) C.SELECTION_FLAG_DEFAULT else 0
+                                )
+                                .build()
+                        }
+                    )
+                    .build()
+            }
+            player.setMediaItem(mediaItem)
             player.prepare()
             player.playWhenReady = true
 
@@ -419,7 +483,7 @@ class PlayerActivity : AppCompatActivity() {
                 "try{var v=document.querySelector('video');if(v){v.pause();v.removeAttribute('autoplay');}}catch(e){}",
                 null
             )
-            updateStatus()
+            updateStatus(getString(R.string.media_found))
         } catch (e: Exception) {
             Log.w(TAG, "Impossibile avviare il player nativo: ${e.message}")
             fallbackToWeb()
@@ -452,13 +516,6 @@ class PlayerActivity : AppCompatActivity() {
         updateStatus()
     }
 
-    private fun originOf(url: String): String {
-        val uri = Uri.parse(url)
-        val scheme = uri.scheme ?: "https"
-        val host = uri.host ?: return "https://$scheme"
-        return "$scheme://$host"
-    }
-
     // ------------------------------------------------------------ lifecycle
 
     override fun onPause() {
@@ -474,6 +531,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         cleanupJob?.cancel()
+        extractionJob?.cancel()
         releaseNativePlayer()
         binding.webView.destroy()
         super.onDestroy()

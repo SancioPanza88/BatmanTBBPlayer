@@ -29,6 +29,8 @@
     <string name="extracting">Ricerca del flusso video…</string>
     <string name="media_found">Flusso video trovato, riproduzione senza pubblicità</string>
     <string name="native_error">Player nativo non disponibile, riproduzione nel browser integrato</string>
+    <string name="extract_failed">Estrazione non riuscita: uso il player web con blocco pubblicita'</string>
+    <string name="toggle_mode">Estrazione server / player web</string>
     <string name="episodes_header">Episodi</string>
     <string name="season_title">Stagione %1$d</string>
     <string name="external_blocked">Navigazione esterna bloccata: %1$s</string>

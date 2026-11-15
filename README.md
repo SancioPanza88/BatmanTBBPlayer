@@ -18,16 +18,30 @@ Ogni push su `main` rilancia la build; ogni tag `v*` pubblica una nuova Release 
   - possibilità di aprire qualsiasi altro JSON compatibile dal dispositivo (pulsante **Apri JSON**)
 - **Catalogo**: intestazione con i metadati della serie, stagioni comprimibili, ricerca episodi
 - **Due sorgenti per episodio** (uqload.vc / chuckle-tube.com) selezionabili con tap lungo
-- **Blocco pubblicità a 3 livelli**
-  1. **Filtro di rete** (`shouldInterceptRequest`): le richieste verso reti pubblicitarie,
-     popunder, tracker e pixel non escono mai dal dispositivo
-  2. **Pulizia del DOM**: rimozione di banner, iframe pubblicitari, overlay fissi, clickbait;
-     blocco di `window.open` (popunder) e delle aperture esterne
-  3. **Player nativo**: quando il flusso video reale (`.m3u8` / `.mp4`) viene intercettato,
-     la riproduzione passa a ExoPlayer (Media3) → **video senza banner, senza pubblicità,
-     con controlli nativi e supporto HLS**
+- **Riproduzione "ad-free"** (come le app Streamflix / Just-Ad-Free):
+  1. **Estrazione server** (predefinita): la pagina del provider viene analizzata dall'app,
+     si ricava l'URL reale del video (`.m3u8` / `.mp4`) e la riproduzione avviene con
+     **ExoPlayer (Media3)**: niente banner, niente pubblicità, controlli nativi, supporto HLS
+     e sottotitoli quando disponibili
+  2. **WebView filtrata** (fallback o modalità manuale): la pagina viene caricata in una WebView
+     con **filtro di rete** (nessuna richiesta pubblicitaria raggiunge la rete) e **pulizia del DOM**
+     (banner, iframe pubblicitari, overlay, popunder, clickbait); se la WebView intercetta il
+     flusso video, la riproduzione passa comunque al player nativo
 - **Contatore** delle richieste pubblicitarie bloccate, mostrato sotto il player
 - Modalità scuro, schermo intero, apertura nel browser, copia link
+
+## Estrazione del flusso video
+
+Il cuore dell'app è `extractor/VideoExtractor.kt`, che applica in ordine diverse strategie:
+
+| Strategia | Dove | Cosa fa |
+|---|---|---|
+| `uqload` | `https://uqload.vc/e/<code>.html` | POST a `/dl` (`op=embed`, `file_code`, `auto=1`) e spacchettamento del JS |
+| `VoeStrategy` | qualunque pagina VOE (es. chuckle-tube.com) | decifra il payload `<script type="application/json">` (rot13 + sostituzioni + base64 + shift + reverse) |
+| `PackedStrategy` | qualunque player packed | spacchetta `eval(function(p,a,c,k,e,d){...})` con l'unpacker in `JsUnpacker.kt` e legge `file: "..."` |
+| `RegexStrategy` | fallback | cerca direttamente un URL `.m3u8` / `.mp4` nella pagina |
+
+Se l'estrazione fallisce l'app ricade automaticamente sulla WebView filtrata.
 
 ## Struttura
 
@@ -41,9 +55,16 @@ app android/
 │       ├── assets/batman-the-brave-and-the-bold.json
 │       ├── java/com/toonitalia/batmanplayer/
 │       │   ├── MainActivity.kt        # catalogo, ricerca, apertura JSON
-│       │   ├── PlayerActivity.kt      # WebView filtrata + player nativo
+│       │   ├── PlayerActivity.kt      # estrazione + player nativo + WebView filtrata
 │       │   ├── block/AdBlocker.kt     # blacklist reti pubblicitarie
 │       │   ├── block/AdBlockScripts.kt # JS di pulizia DOM e sniffing del video
+│       │   ├── extractor/VideoExtractor.kt  # strategie di estrazione del flusso
+│       │   ├── extractor/JsUnpacker.kt      # unpacker del JS "packed"
+│       │   ├── extractor/VoeStrategy.kt     # player VOE (chuckle-tube)
+│       │   ├── extractor/PackedStrategy.kt  # player con JS packed (uqload)
+│       │   ├── extractor/RegexStrategy.kt   # fallback regex
+│       │   ├── extractor/Http.kt            # client HTTP minimale
+│       │   ├── player/NativePlayerFactory.kt# ExoPlayer con TLS permissivo
 │       │   ├── data/SeriesParser.kt   # parsing del JSON
 │       │   ├── model/Models.kt
 │       │   └── ui/EpisodeAdapter.kt

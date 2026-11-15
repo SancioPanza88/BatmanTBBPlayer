@@ -21,6 +21,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean(KEY_NATIVE, true)
         set(value) = sp.edit().putBoolean(KEY_NATIVE, value).apply()
 
+    /** true = usa la WebView filtrata invece dell'estrazione server. */
+    var useWebMode: Boolean
+        get() = sp.getBoolean(KEY_WEB_MODE, false)
+        set(value) = sp.edit().putBoolean(KEY_WEB_MODE, value).apply()
+
     var lastOpenedEpisode: String
         get() = sp.getString(KEY_LAST_EPISODE, "").orEmpty()
         set(value) = sp.edit().putString(KEY_LAST_EPISODE, value).apply()
@@ -29,6 +34,7 @@ class Prefs(context: Context) {
         private const val KEY_ADBLOCK = "adblock_enabled"
         private const val KEY_SOURCE = "source_index"
         private const val KEY_NATIVE = "prefer_native"
+        private const val KEY_WEB_MODE = "web_mode"
         private const val KEY_LAST_EPISODE = "last_episode"
     }
 }
