@@ -31,8 +31,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.datasource.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.google.android.material.snackbar.Snackbar
 import com.toonitalia.batmanplayer.block.AdBlockScripts
 import com.toonitalia.batmanplayer.block.AdBlocker
@@ -332,7 +332,6 @@ class PlayerActivity : AppCompatActivity() {
                 )
             )
             binding.playerToolbar.isVisible = false
-            callback.onCustomViewEntered()
         }
 
         override fun onHideCustomView() {

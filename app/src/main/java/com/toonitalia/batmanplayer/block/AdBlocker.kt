@@ -1,6 +1,7 @@
 package com.toonitalia.batmanplayer.block
 
 import android.webkit.WebResourceResponse
+import java.io.ByteArrayInputStream
 import java.util.Locale
 
 /**
@@ -181,7 +182,7 @@ object AdBlocker {
 
     /** Risposta vuota: annulla la richiesta restituendo 200 senza contenuto. */
     fun emptyResponse(): WebResourceResponse =
-        WebResourceResponse("text/plain", "utf-8", ByteArray(0))
+        WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
 
     private fun hostOf(lowerUrl: String): String {
         val afterScheme = lowerUrl.substringAfter("://", lowerUrl)

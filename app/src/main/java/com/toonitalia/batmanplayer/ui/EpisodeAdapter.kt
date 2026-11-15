@@ -2,7 +2,10 @@ package com.toonitalia.batmanplayer.ui
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.chip.Chip
 import com.toonitalia.batmanplayer.R
 import com.toonitalia.batmanplayer.databinding.ItemEpisodeBinding
 import com.toonitalia.batmanplayer.databinding.ItemHeaderBinding
