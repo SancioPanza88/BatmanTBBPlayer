@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Batman TBB Player</string>
+    <string name="open_json">Apri JSON</string>
+    <string name="search">Cerca episodi</string>
+    <string name="play">Riproduci</string>
+    <string name="expand">Espandi / comprimi</string>
+    <string name="toggle_adblock">Blocca pubblicità</string>
+    <string name="toggle_native">Usa player nativo</string>
+    <string name="change_source">Cambia sorgente</string>
+    <string name="reload">Ricarica</string>
+    <string name="fullscreen">Schermo intero</string>
+    <string name="open_browser">Apri nel browser</string>
+    <string name="copy_link">Copia link</string>
+    <string name="adblock_note">Blocco pubblicità attivo: banner, popunder e tracker vengono filtrati prima del caricamento. Il video viene riprodotto con il player integrato quando possibile, senza banner.</string>
+    <string name="episodes_count">%1$d episodi</string>
+    <string name="season_count">%1$d episodi</string>
+    <string name="blocked_requests">Blocco pubblicità: %1$d richieste bloccate</string>
+    <string name="adblock_off">Blocco pubblicità disattivato</string>
+    <string name="source_uqload">uqload.vc</string>
+    <string name="source_chuckle">chuckle-tube.com</string>
+    <string name="choose_source">Scegli la sorgente</string>
+    <string name="cancel">Annulla</string>
+    <string name="json_loaded">Serie caricata: %1$s</string>
+    <string name="json_error">File JSON non valido: %1$s</string>
+    <string name="no_episodes">Nessun episodio trovato</string>
+    <string name="native_player">Player nativo (ExoPlayer)</string>
+    <string name="web_player">Player web integrato</string>
+    <string name="extracting">Ricerca del flusso video…</string>
+    <string name="media_found">Flusso video trovato, riproduzione senza pubblicità</string>
+    <string name="native_error">Player nativo non disponibile, riproduzione nel browser integrato</string>
+    <string name="episodes_header">Episodi</string>
+    <string name="season_title">Stagione %1$d</string>
+    <string name="external_blocked">Navigazione esterna bloccata: %1$s</string>
+    <string name="no_source">Nessuna sorgente disponibile per questo episodio</string>
+    <string name="downloaded_blocked">Download bloccato</string>
+    <string name="metadata">%1$s • %2$s • %3$s</string>
+    <string name="source_link">Fonte: %1$s</string>
+</resources>

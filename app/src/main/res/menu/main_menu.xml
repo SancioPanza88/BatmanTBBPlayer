@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_search"
+        android:icon="@drawable/ic_search"
+        android:title="@string/search"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="ifRoom|collapseActionView" />
+
+    <item
+        android:id="@+id/action_toggle_adblock"
+        android:icon="@drawable/ic_shield"
+        android:title="@string/toggle_adblock"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_toggle_native"
+        android:title="@string/toggle_native"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_source"
+        android:title="@string/change_source"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_open_json"
+        android:title="@string/open_json"
+        app:showAsAction="never" />
+</menu>

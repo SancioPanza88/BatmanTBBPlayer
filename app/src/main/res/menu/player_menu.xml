@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_switch_source"
+        android:icon="@drawable/ic_switch"
+        android:title="@string/change_source"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_reload"
+        android:icon="@drawable/ic_refresh"
+        android:title="@string/reload"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_fullscreen"
+        android:icon="@drawable/ic_fullscreen"
+        android:title="@string/fullscreen"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_open_browser"
+        android:icon="@drawable/ic_open_in_new"
+        android:title="@string/open_browser"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_copy_link"
+        android:title="@string/copy_link"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_toggle_adblock"
+        android:title="@string/toggle_adblock"
+        app:showAsAction="never" />
+</menu>
